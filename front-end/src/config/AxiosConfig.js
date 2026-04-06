@@ -1,7 +1,8 @@
 import axios from "axios";
+import axios from "axios";
 
 const AxiosConfig = axios.create({
-    baseURL:"https://localhost/",
-})
+    baseURL: "https://seu-backend.onrender.com"
+});
 
-export default AxiosConfig
+export default AxiosConfig;
