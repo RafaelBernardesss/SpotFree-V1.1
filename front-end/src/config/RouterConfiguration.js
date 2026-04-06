@@ -15,6 +15,10 @@ const router = createRouter({
             meta: { title: "Cadastro" }
         },
         {
+            path: "/",
+            redirect: "/home",
+        },
+        {
             path: "/home",
             component: () => import("../view/rotaHome.vue"),
             meta: { title: "Home" }
