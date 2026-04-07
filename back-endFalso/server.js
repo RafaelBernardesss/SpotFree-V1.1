@@ -55,10 +55,13 @@ app.get("/", (req, res) => {
 });
 
 app.get("/teste-db", (req, res) => {
-    db.query("SELECT 1", (err) => {
-        if (err) return res.status(500).json(err);
-        res.send("Banco conectado ✅");
-    });
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json(err);
+    }
+    res.send("Banco conectado ✅");
+  });
 });
 
 // ================= MUSICAS =================
