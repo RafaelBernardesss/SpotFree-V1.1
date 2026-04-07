@@ -5,12 +5,13 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// PASTA UPLOAD
+// ================= UPLOAD =================
 const uploadPath = path.join(__dirname, "uploads");
 
 if (!fs.existsSync(uploadPath)) {
@@ -19,7 +20,6 @@ if (!fs.existsSync(uploadPath)) {
 
 app.use("/uploads", express.static(uploadPath));
 
-// MULTER
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadPath),
     filename: (req, file, cb) => {
@@ -27,42 +27,41 @@ const storage = multer.diskStorage({
     }
 });
 
-const fileFilter = (req, file, cb) => {
-    if (file.fieldname === "imagem" && !file.mimetype.startsWith("image/")) {
-        return cb(new Error("Arquivo deve ser imagem"));
-    }
-
-    if (file.fieldname === "audio" && !file.mimetype.startsWith("audio/")) {
-        return cb(new Error("Arquivo deve ser áudio"));
-    }
-
-    cb(null, true);
-};
-
 const upload = multer({
     storage,
-    fileFilter,
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// DB
+// ================= DB =================
 const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "spotfree"
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 3306
 });
 
 db.connect(err => {
-    if (err) console.error("❌ Erro DB:", err);
-    else console.log("✅ Banco conectado");
+    if (err) {
+        console.error("❌ Erro DB:", err);
+    } else {
+        console.log("✅ Banco conectado");
+    }
 });
 
+// ================= TESTE =================
 app.get("/", (req, res) => {
-  res.send("API rodando 🚀");
+    res.send("API rodando 🚀");
 });
 
-// ================= ROTAS =================
+app.get("/teste-db", (req, res) => {
+    db.query("SELECT 1", (err) => {
+        if (err) return res.status(500).json(err);
+        res.send("Banco conectado ✅");
+    });
+});
+
+// ================= MUSICAS =================
 
 // GET
 app.get("/musicas", (req, res) => {
@@ -100,7 +99,7 @@ app.post("/musicas",
     }
 );
 
-// DELETE (AGORA APAGA ARQUIVO TAMBÉM)
+// DELETE
 app.delete("/musicas/:id", (req, res) => {
 
     db.query("SELECT * FROM musicas WHERE id=?", [req.params.id], (err, result) => {
@@ -125,102 +124,9 @@ app.delete("/musicas/:id", (req, res) => {
     });
 });
 
-// PUT (AGORA ATUALIZA IMAGEM E AUDIO)
-app.put("/musicas/:id",
-    upload.fields([
-        { name: "imagem", maxCount: 1 },
-        { name: "audio", maxCount: 1 }
-    ]),
-    (req, res) => {
+// ================= USUÁRIO =================
 
-        const { titulo, artista } = req.body;
-
-        db.query("SELECT * FROM musicas WHERE id=?", [req.params.id], (err, result) => {
-            if (err) return res.status(500).json(err);
-
-            const musica = result[0];
-
-            let novaImagem = musica.imagem;
-            let novoAudio = musica.audio;
-
-            // nova imagem
-            if (req.files?.imagem) {
-                if (musica.imagem) {
-                    const caminho = path.join(uploadPath, musica.imagem);
-                    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
-                }
-                novaImagem = req.files.imagem[0].filename;
-            }
-
-            // novo audio
-            if (req.files?.audio) {
-                if (musica.audio) {
-                    const caminho = path.join(uploadPath, musica.audio);
-                    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
-                }
-                novoAudio = req.files.audio[0].filename;
-            }
-
-            db.query(
-                "UPDATE musicas SET titulo=?, artista=?, imagem=?, audio=? WHERE id=?",
-                [titulo, artista, novaImagem, novoAudio, req.params.id],
-                (err) => {
-                    if (err) return res.status(500).json(err);
-                    res.json({ ok: true });
-                }
-            );
-        });
-    }
-);
-// 🔥 ATUALIZAR PERFIL DO USUÁRIO
-app.put("/perfil",
-    upload.single("imagem"),
-    (req, res) => {
-
-        const { nome, id } = req.body;
-
-        if (!id) {
-            return res.status(400).json({ erro: "ID do usuário obrigatório" });
-        }
-
-        db.query("SELECT * FROM usuarios WHERE id=?", [id], (err, result) => {
-            if (err) return res.status(500).json(err);
-
-            const usuario = result[0];
-
-            let novaImagem = usuario.imagem;
-
-            // 🔥 SE VEIO NOVA IMAGEM
-            if (req.file) {
-
-                // apagar antiga
-                if (usuario.imagem) {
-                    const caminho = path.join(uploadPath, usuario.imagem);
-                    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
-                }
-
-                novaImagem = req.file.filename;
-            }
-
-            db.query(
-                "UPDATE usuarios SET nome=?, imagem=? WHERE id=?",
-                [nome, novaImagem, id],
-                (err) => {
-                    if (err) return res.status(500).json(err);
-
-                    res.json({
-                        nome,
-                        imagem: novaImagem
-                    });
-                }
-            );
-        });
-    }
-);
-
-//registrar
-const bcrypt = require("bcrypt");
-
+// REGISTER
 app.post("/register", async (req, res) => {
     const { nome, email, senha, confirmarSenha, data_nascimento } = req.body;
 
@@ -233,7 +139,6 @@ app.post("/register", async (req, res) => {
     }
 
     try {
-        // 🔥 CRIPTOGRAFAR SENHA
         const senhaHash = await bcrypt.hash(senha, 10);
 
         db.query(
@@ -251,12 +156,12 @@ app.post("/register", async (req, res) => {
             }
         );
 
-    } catch (err) {
+    } catch {
         res.status(500).json({ erro: "Erro ao criptografar senha" });
     }
 });
 
-//login
+// LOGIN
 app.post("/login", (req, res) => {
     const { email, senha } = req.body;
 
@@ -278,7 +183,6 @@ app.post("/login", (req, res) => {
             return res.status(400).json({ erro: "Email ou senha inválidos" });
         }
 
-        // 🔥 Aqui retornamos o filename da imagem junto com os dados
         res.json({
             ok: true,
             usuario: {
@@ -290,9 +194,10 @@ app.post("/login", (req, res) => {
         });
     });
 });
-// START
+
+// ================= START =================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log("🚀 Servidor rodando");
+    console.log("🚀 Servidor rodando na porta", PORT);
 });
