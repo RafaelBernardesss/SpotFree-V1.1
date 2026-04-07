@@ -58,6 +58,10 @@ db.connect(err => {
     else console.log("✅ Banco conectado");
 });
 
+app.get("/", (req, res) => {
+  res.send("API rodando 🚀");
+});
+
 // ================= ROTAS =================
 
 // GET
