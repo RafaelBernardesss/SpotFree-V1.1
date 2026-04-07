@@ -1,3 +1,4 @@
+
 // IMPORTS
 const express = require("express");
 const mysql = require("mysql2");
@@ -38,12 +39,15 @@ const db = mysql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306
+    port: Number(process.env.DB_PORT) || 3306,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 db.connect(err => {
     if (err) {
-        console.error("❌ Erro DB:", err);
+        console.error("❌ ERRO COMPLETO DB:", err);
     } else {
         console.log("✅ Banco conectado");
     }
@@ -57,7 +61,7 @@ app.get("/", (req, res) => {
 app.get("/teste-db", (req, res) => {
   db.query("SELECT 1", (err) => {
     if (err) {
-      console.error(err);
+      console.error("❌ ERRO TESTE DB:", err);
       return res.status(500).json(err);
     }
     res.send("Banco conectado ✅");
