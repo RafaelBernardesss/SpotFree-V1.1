@@ -1,4 +1,3 @@
-
 // IMPORTS
 const express = require("express");
 const mysql = require("mysql2");
@@ -33,16 +32,13 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ================= DB =================
+// ================= DB (CORRIGIDO) =================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT) || 3306,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "spotfree",
+    port: Number(process.env.DB_PORT) || 3306
 });
 
 db.connect(err => {
@@ -59,13 +55,13 @@ app.get("/", (req, res) => {
 });
 
 app.get("/teste-db", (req, res) => {
-  db.query("SELECT 1", (err) => {
-    if (err) {
-      console.error("❌ ERRO TESTE DB:", err);
-      return res.status(500).json(err);
-    }
-    res.send("Banco conectado ✅");
-  });
+    db.query("SELECT 1", (err) => {
+        if (err) {
+            console.error("❌ ERRO TESTE DB:", err);
+            return res.status(500).json(err);
+        }
+        res.send("Banco conectado ✅");
+    });
 });
 
 // ================= MUSICAS =================
