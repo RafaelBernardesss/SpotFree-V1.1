@@ -80,7 +80,7 @@ export default {
                 if (this.imagem) formData.append("imagem", this.imagem)
                 if (this.audio) formData.append("audio", this.audio)
 
-                const res = await fetch("http://localhost:3000/musicas", {
+                const res = await fetch("https://spotfree-v1-1.onrender.com/musicas", {
                     method: "POST",
                     body: formData
                 })
@@ -108,7 +108,7 @@ export default {
         },
 
         async carregarFavoritas() {
-            const res = await fetch("http://localhost:3000/musicas")
+            const res = await fetch("https://spotfree-v1-1.onrender.com/musicas")
             this.favoritas = await res.json()
         },
 
@@ -141,7 +141,7 @@ export default {
             this.tempoAtual = "0:00"
             this.duracao = "0:00"
 
-            this.audioPlayer = new Audio(`http://localhost:3000/uploads/${musica.audio}`)
+            this.audioPlayer = new Audio(`https://spotfree-v1-1.onrender.com/uploads/${musica.audio}`)
             this.audioPlayer.volume = this.volume
 
             this.audioPlayer.play()

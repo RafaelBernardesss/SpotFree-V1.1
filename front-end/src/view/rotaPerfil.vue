@@ -45,7 +45,7 @@ export default {
                 // 🔥 Monta URL completa apenas se houver imagem
                 this.usuario = {
                     ...user,
-                    imagem: user.imagem ? `http://localhost:3000/uploads/${user.imagem}` : null
+                    imagem: user.imagem ? `https://spotfree-v1-1.onrender.com/uploads/${user.imagem}` : null
                 };
             }
         },
@@ -97,7 +97,7 @@ export default {
                     formData.append("imagem", this.novaImagem);
                 }
 
-                const response = await fetch("http://localhost:3000/perfil", {
+                const response = await fetch("https://spotfree-v1-1.onrender.com/perfil", {
                     method: "PUT",
                     body: formData
                 });
@@ -111,7 +111,7 @@ export default {
 
                 // 🔥 Atualiza front-end com URL completa
                 this.usuario.nome = data.nome;
-                this.usuario.imagem = data.imagem ? `http://localhost:3000/uploads/${data.imagem}` : null;
+                this.usuario.imagem = data.imagem ? `https://spotfree-v1-1.onrender.com/uploads/${data.imagem}` : null;
 
                 // 🔥 Salva apenas o filename no localStorage
                 const usuarioParaSalvar = {

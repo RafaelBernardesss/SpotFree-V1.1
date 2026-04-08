@@ -13,7 +13,7 @@ export default {
         },
         async login() {
             try {
-                const res = await fetch("https://spotfree-v1-1.onrender.com", {
+                const res = await fetch("https://spotfree-v1-1.onrender.com/login", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"

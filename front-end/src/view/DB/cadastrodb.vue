@@ -11,7 +11,7 @@ export default {
   methods: {
     async cadastrarMusica() {
       try {
-        const resposta = await fetch("http://localhost:3000/musicas", {
+        const resposta = await fetch("https://spotfree-v1-1.onrender.com/musicas", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
