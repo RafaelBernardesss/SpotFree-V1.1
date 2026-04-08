@@ -8,7 +8,12 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"]
+}));
+
 app.use(express.json());
 
 // ================= UPLOAD =================
@@ -32,20 +37,20 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ================= DB (CORRIGIDO) =================
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "spotfree",
-    port: Number(process.env.DB_PORT) || 3306
+// ================= DB (RAILWAY) =================
+const db = mysql.createPool({
+    uri: process.env.DATABASE_URL,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect(err => {
+db.getConnection((err, conn) => {
     if (err) {
-        console.error("❌ ERRO COMPLETO DB:", err);
+        console.error("❌ ERRO DB:", err);
     } else {
-        console.log("✅ Banco conectado");
+        console.log("✅ Banco conectado (Railway)");
+        conn.release();
     }
 });
 
