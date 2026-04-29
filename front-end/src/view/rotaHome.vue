@@ -1,27 +1,27 @@
 <script>
-export default{
-    data() {
-        return {
-            menuAberto: false
-        }
+export default {
+  data() {
+    return {
+      menuAberto: false
+    };
+  },
+
+  methods: {
+    abrirMenu() {
+      this.menuAberto = !this.menuAberto;
     },
 
-    methods: {
-        abrirMenu() {
-            this.menuAberto = !this.menuAberto
-        },
+    comecar() {
+      const usuario = localStorage.getItem("usuario");
 
-        comecar() {
-            const usuario = localStorage.getItem("usuario");
-
-            if (usuario) {
-                this.$router.push("/music");
-            } else {
-                this.$router.push("/login");
-            }
-        }
+      if (usuario) {
+        this.$router.push("/music");
+      } else {
+        this.$router.push("/login");
+      }
     }
-}
+  }
+};
 </script>
 <template>
     <div class="container">

@@ -1,4 +1,4 @@
-// IMPORTS
+// ================= IMPORTS =================
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
@@ -6,9 +6,11 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+require("dotenv").config();
 
 const app = express();
 
+// ================= CONFIG =================
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"]
@@ -37,36 +39,40 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ================= DB (RAILWAY CORRIGIDO) =================
-const db = mysql.createPool(process.env.DATABASE_URL);
+// ================= MYSQL LOCALHOST =================
+const db = mysql.createPool({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "musica_app",
+    waitForConnections: true,
+    connectionLimit: 10
+});
 
 db.getConnection((err, conn) => {
     if (err) {
-        console.error("❌ ERRO DB:", err);
+        console.log("❌ Erro MySQL:", err);
     } else {
-        console.log("✅ Banco conectado (Railway)");
+        console.log("✅ Banco MySQL conectado no localhost");
         conn.release();
     }
 });
 
 // ================= TESTE =================
 app.get("/", (req, res) => {
-    res.send("API rodando 🚀");
+    res.send("API rodando no localhost 🚀");
 });
 
 app.get("/teste-db", (req, res) => {
     db.query("SELECT 1", (err) => {
-        if (err) {
-            console.error("❌ ERRO TESTE DB:", err);
-            return res.status(500).json(err);
-        }
+        if (err) return res.status(500).json(err);
         res.send("Banco conectado ✅");
     });
 });
 
 // ================= MUSICAS =================
 
-// GET
+// LISTAR
 app.get("/musicas", (req, res) => {
     db.query("SELECT * FROM musicas", (err, result) => {
         if (err) return res.status(500).json(err);
@@ -74,7 +80,7 @@ app.get("/musicas", (req, res) => {
     });
 });
 
-// POST
+// CADASTRAR
 app.post("/musicas",
     upload.fields([
         { name: "imagem", maxCount: 1 },
@@ -87,10 +93,6 @@ app.post("/musicas",
         const imagem = req.files?.imagem?.[0]?.filename || null;
         const audio = req.files?.audio?.[0]?.filename || null;
 
-        if (!titulo || !artista) {
-            return res.status(400).json({ erro: "Título e artista obrigatórios" });
-        }
-
         db.query(
             "INSERT INTO musicas (titulo, artista, imagem, audio) VALUES (?, ?, ?, ?)",
             [titulo, artista, imagem, audio],
@@ -102,7 +104,7 @@ app.post("/musicas",
     }
 );
 
-// DELETE
+// DELETAR
 app.delete("/musicas/:id", (req, res) => {
 
     db.query("SELECT * FROM musicas WHERE id=?", [req.params.id], (err, result) => {
@@ -127,80 +129,66 @@ app.delete("/musicas/:id", (req, res) => {
     });
 });
 
-// ================= USUÁRIO =================
-
-// REGISTER
+// ================= REGISTER =================
 app.post("/register", async (req, res) => {
+
     const { nome, email, senha, confirmarSenha, data_nascimento } = req.body;
 
-    if (!nome || !email || !senha || !confirmarSenha || !data_nascimento) {
-        return res.status(400).json({ erro: "Preencha todos os campos" });
-    }
-
     if (senha !== confirmarSenha) {
-        return res.status(400).json({ erro: "Senhas não conferem" });
+        return res.status(400).json({ erro: "Senhas diferentes" });
     }
 
-    try {
-        const senhaHash = await bcrypt.hash(senha, 10);
+    const senhaHash = await bcrypt.hash(senha, 10);
 
-        db.query(
-            "INSERT INTO usuarios (nome, email, senha, data_nascimento) VALUES (?, ?, ?, ?)",
-            [nome, email, senhaHash, data_nascimento],
-            (err) => {
-                if (err) {
-                    if (err.code === "ER_DUP_ENTRY") {
-                        return res.status(400).json({ erro: "Email já existe" });
-                    }
-                    return res.status(500).json(err);
-                }
-
-                res.json({ ok: true });
-            }
-        );
-
-    } catch {
-        res.status(500).json({ erro: "Erro ao criptografar senha" });
-    }
+    db.query(
+        "INSERT INTO usuarios (nome,email,senha,data_nascimento) VALUES (?,?,?,?)",
+        [nome, email, senhaHash, data_nascimento],
+        (err) => {
+            if (err) return res.status(500).json(err);
+            res.json({ ok: true });
+        }
+    );
 });
 
-// LOGIN
+// ================= LOGIN =================
 app.post("/login", (req, res) => {
+
     const { email, senha } = req.body;
 
-    if (!email || !senha) {
-        return res.status(400).json({ erro: "Preencha todos os campos" });
-    }
+    db.query(
+        "SELECT * FROM usuarios WHERE email=?",
+        [email],
+        async (err, result) => {
 
-    db.query("SELECT * FROM usuarios WHERE email = ?", [email], async (err, result) => {
-        if (err) return res.status(500).json({ erro: "Erro no servidor" });
+            if (err) return res.status(500).json(err);
 
-        if (result.length === 0) {
-            return res.status(400).json({ erro: "Email ou senha inválidos" });
-        }
-
-        const usuario = result[0];
-
-        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-        if (!senhaCorreta) {
-            return res.status(400).json({ erro: "Email ou senha inválidos" });
-        }
-
-        res.json({
-            ok: true,
-            usuario: {
-                id: usuario.id,
-                nome: usuario.nome,
-                email: usuario.email,
-                imagem: usuario.imagem || null
+            if (result.length === 0) {
+                return res.status(400).json({ erro: "Usuário não encontrado" });
             }
-        });
-    });
+
+            const usuario = result[0];
+
+            const senhaOk = await bcrypt.compare(senha, usuario.senha);
+
+            if (!senhaOk) {
+                return res.status(400).json({ erro: "Senha incorreta" });
+            }
+
+            res.json({
+                ok: true,
+                usuario: {
+                    id: usuario.id,
+                    nome: usuario.nome,
+                    email: usuario.email
+                }
+            });
+        }
+    );
 });
 
 // ================= START =================
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 app.listen(PORT, () => {
-    console.log("🚀 Servidor rodando na porta", PORT);
+    console.log("🚀 Rodando em http://localhost:3000");
 });

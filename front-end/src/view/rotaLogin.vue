@@ -1,50 +1,57 @@
 <script>
 export default {
-    data() {
-        return {
-            menuAberto: false,
-            email: "",
-            senha: ""
-        }
+  data() {
+    return {
+      menuAberto: false,
+
+      // API LOCALHOST
+      api: "http://localhost:3000",
+
+      email: "",
+      senha: ""
+    };
+  },
+
+  methods: {
+    abrirMenu() {
+      this.menuAberto = !this.menuAberto;
     },
-    methods: {
-        abrirMenu() {
-            this.menuAberto = !this.menuAberto
-        },
-        async login() {
-            try {
-                const res = await fetch("https://spotfree-v1-1.onrender.com/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        email: this.email,
-                        senha: this.senha
-                    })
-                });
 
-                const data = await res.json();
+    async login() {
+      try {
+        const res = await fetch(`${this.api}/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: this.email,
+            senha: this.senha
+          })
+        });
 
-                if (res.ok) {
-                    alert("Login realizado!");
+        const data = await res.json();
 
-                    // salvar usuário (opcional)
-                    localStorage.setItem("usuario", JSON.stringify(data.usuario));
+        if (res.ok) {
+          alert("Login realizado com sucesso!");
 
-                    this.$router.push("/music");
-                } else {
-                    alert(data.erro);
-                }
+          localStorage.setItem(
+            "usuario",
+            JSON.stringify(data.usuario)
+          );
 
-            } catch (err) {
-                console.error(err);
-                alert("Erro no servidor");
-            }
+          this.$router.push("/music");
+        } else {
+          alert(data.erro || "Login inválido");
         }
-    }
 
-}
+      } catch (error) {
+        console.log(error);
+        alert("Erro no servidor");
+      }
+    }
+  }
+};
 </script>
 <template>
     <div class="container">

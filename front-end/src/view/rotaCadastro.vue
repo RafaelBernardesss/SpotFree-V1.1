@@ -1,65 +1,69 @@
 <script>
 export default {
-    data() {
-        return {
-            menuAberto: false,
-            email: "",
-            nome: "",
-            senha: "",
-            confirmarSenha: "",
-            data_nascimento: ""
-        }
+  data() {
+    return {
+      menuAberto: false,
+
+      // API LOCALHOST
+      api: "http://localhost:3000",
+
+      email: "",
+      nome: "",
+      senha: "",
+      confirmarSenha: "",
+      data_nascimento: ""
+    };
+  },
+
+  methods: {
+    abrirMenu() {
+      this.menuAberto = !this.menuAberto;
     },
 
-    methods: {
-        abrirMenu() {
-            this.menuAberto = !this.menuAberto
-        },
+    async cadastrar() {
+      if (this.senha !== this.confirmarSenha) {
+        alert("Senhas não conferem");
+        return;
+      }
 
-        async cadastrar() {
+      try {
+        const res = await fetch(`${this.api}/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            nome: this.nome,
+            email: this.email,
+            senha: this.senha,
+            confirmarSenha: this.confirmarSenha,
+            data_nascimento: this.data_nascimento
+          })
+        });
 
-            if (this.senha !== this.confirmarSenha) {
-                return alert("Senhas não conferem");
-            }
+        const data = await res.json();
 
-            try {
-                const res = await fetch("https://spotfree-v1-1.onrender.com/register", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        nome: this.nome,
-                        email: this.email,
-                        senha: this.senha,
-                        confirmarSenha: this.confirmarSenha,
-                        data_nascimento: this.data_nascimento
-                    })
-                });
+        if (res.ok) {
+          alert("Conta criada com sucesso!");
 
-                const data = await res.json();
+          this.nome = "";
+          this.email = "";
+          this.senha = "";
+          this.confirmarSenha = "";
+          this.data_nascimento = "";
 
-                if (res.ok) {
-                    alert("Conta criada!");
-
-                    this.nome = "";
-                    this.email = "";
-                    this.senha = "";
-                    this.confirmarSenha = "";
-                    this.data_nascimento = "";
-
-                    this.$router.push("/login");
-                } else {
-                    alert(data.erro || "Erro ao cadastrar");
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("Erro no servidor");
-            }
+          this.$router.push("/login");
+        } else {
+          alert(data.erro || "Erro ao cadastrar");
         }
+
+      } catch (error) {
+        console.log(error);
+        alert("Erro no servidor");
+      }
     }
-}
+  }
+};
 </script>
 <template>
     <div class="container">

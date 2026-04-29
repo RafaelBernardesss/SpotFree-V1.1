@@ -1,137 +1,144 @@
 <script>
 export default {
-    data() {
-        return {
-            menuAberto: false,
+  data() {
+    return {
+      menuAberto: false,
 
-            usuario: {
-                nome: "Seu Nome",
-                email: "email@gmail.com",
-                imagem: null
-            },
+      // URL DO BACK-END LOCALHOST
+      api: "http://localhost:3000",
 
-            favoritas: [
-                { id: 1, titulo: "Musica 1", artista: "Artista A" },
-                { id: 2, titulo: "Musica 2", artista: "Artista B" }
-            ],
+      usuario: {
+        nome: "Seu Nome",
+        email: "email@gmail.com",
+        imagem: null
+      },
 
-            modalEditar: false,
-            novoNome: "",
-            novaImagem: null,
-            previewImagem: null
-        }
+      favoritas: [
+        { id: 1, titulo: "Musica 1", artista: "Artista A" },
+        { id: 2, titulo: "Musica 2", artista: "Artista B" }
+      ],
+
+      modalEditar: false,
+      novoNome: "",
+      novaImagem: null,
+      previewImagem: null
+    };
+  },
+
+  mounted() {
+    this.carregarUsuario();
+  },
+
+  methods: {
+    abrirMenu() {
+      this.menuAberto = !this.menuAberto;
     },
 
-    mounted() {
-        this.carregarUsuario();
+    sair() {
+      localStorage.removeItem("usuario");
+      window.location.href = "/home";
     },
 
-    methods: {
-        abrirMenu() {
-            this.menuAberto = !this.menuAberto
-        },
+    carregarUsuario() {
+      const usuarioSalvo = localStorage.getItem("usuario");
 
-        sair() {
-            localStorage.removeItem("usuario");
-            window.location.href = "/home";
-        },
+      if (usuarioSalvo) {
+        const user = JSON.parse(usuarioSalvo);
 
-        carregarUsuario() {
-            const usuarioSalvo = localStorage.getItem("usuario");
+        this.usuario = {
+          ...user,
+          imagem: user.imagem
+            ? `${this.api}/uploads/${user.imagem}`
+            : null
+        };
+      }
+    },
 
-            if (usuarioSalvo) {
-                const user = JSON.parse(usuarioSalvo);
+    abrirEditar() {
+      const usuarioSalvo = localStorage.getItem("usuario");
 
-                // 🔥 Monta URL completa apenas se houver imagem
-                this.usuario = {
-                    ...user,
-                    imagem: user.imagem ? `https://spotfree-v1-1.onrender.com/uploads/${user.imagem}` : null
-                };
-            }
-        },
+      if (!usuarioSalvo) {
+        alert("Faça login primeiro");
+        window.location.href = "/login";
+        return;
+      }
 
-        abrirEditar() {
-            const usuarioSalvo = localStorage.getItem("usuario");
+      this.modalEditar = true;
+      this.novoNome = this.usuario.nome;
+      this.previewImagem = this.usuario.imagem;
+    },
 
-            if (!usuarioSalvo) {
-                alert("Você precisa estar logado para editar o perfil!");
-                window.location.href = "/login";
-                return;
-            }
+    fecharEditar() {
+      this.modalEditar = false;
+      this.novaImagem = null;
+    },
 
-            this.modalEditar = true;
-            this.novoNome = this.usuario.nome;
-            this.previewImagem = this.usuario.imagem; // 🔥 mostrar a imagem atual
-        },
+    selecionarImagem(event) {
+      const file = event.target.files[0];
 
-        fecharEditar() {
-            this.modalEditar = false;
-            this.novaImagem = null;
-        },
+      if (file) {
+        this.novaImagem = file;
+        this.previewImagem = URL.createObjectURL(file);
+      }
+    },
 
-        selecionarImagem(event) {
-            const file = event.target.files[0];
-            if (file) {
-                this.novaImagem = file;
-                this.previewImagem = URL.createObjectURL(file);
-            }
-        },
+    async salvarPerfil() {
+      const usuarioSalvo = localStorage.getItem("usuario");
 
-        async salvarPerfil() {
-            const usuarioSalvo = localStorage.getItem("usuario");
+      if (!usuarioSalvo) {
+        alert("Sessão expirada");
+        return;
+      }
 
-            if (!usuarioSalvo) {
-                alert("Sessão expirada. Faça login novamente.");
-                window.location.href = "/login";
-                return;
-            }
+      try {
+        const usuario = JSON.parse(usuarioSalvo);
 
-            try {
-                const usuario = JSON.parse(usuarioSalvo);
+        const formData = new FormData();
+        formData.append("id", usuario.id);
+        formData.append("nome", this.novoNome);
 
-                const formData = new FormData();
-                formData.append("nome", this.novoNome);
-                formData.append("id", usuario.id);
-
-                if (this.novaImagem) {
-                    formData.append("imagem", this.novaImagem);
-                }
-
-                const response = await fetch("https://spotfree-v1-1.onrender.com/perfil", {
-                    method: "PUT",
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    alert(data.erro || "Erro no servidor");
-                    return;
-                }
-
-                // 🔥 Atualiza front-end com URL completa
-                this.usuario.nome = data.nome;
-                this.usuario.imagem = data.imagem ? `https://spotfree-v1-1.onrender.com/uploads/${data.imagem}` : null;
-
-                // 🔥 Salva apenas o filename no localStorage
-                const usuarioParaSalvar = {
-                    id: usuario.id,
-                    nome: data.nome,
-                    email: usuario.email,
-                    imagem: data.imagem || null
-                };
-                localStorage.setItem("usuario", JSON.stringify(usuarioParaSalvar));
-
-                this.modalEditar = false;
-                this.novaImagem = null;
-
-            } catch (erro) {
-                console.error(erro);
-                alert("Erro ao atualizar perfil");
-            }
+        if (this.novaImagem) {
+          formData.append("imagem", this.novaImagem);
         }
+
+        const response = await fetch(`${this.api}/perfil`, {
+          method: "PUT",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.erro);
+          return;
+        }
+
+        this.usuario.nome = data.nome;
+        this.usuario.imagem = data.imagem
+          ? `${this.api}/uploads/${data.imagem}`
+          : null;
+
+        localStorage.setItem(
+          "usuario",
+          JSON.stringify({
+            id: usuario.id,
+            nome: data.nome,
+            email: usuario.email,
+            imagem: data.imagem
+          })
+        );
+
+        this.modalEditar = false;
+        this.novaImagem = null;
+
+        alert("Perfil atualizado!");
+      } catch (error) {
+        console.log(error);
+        alert("Erro ao salvar");
+      }
     }
-}
+  }
+};
 </script>
 
 <template>

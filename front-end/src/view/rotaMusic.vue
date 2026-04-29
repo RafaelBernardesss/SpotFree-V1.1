@@ -1,223 +1,213 @@
 <script>
 export default {
-    data() {
-        return {
-            menuAberto: false,
-            modal: false,
+  data() {
+    return {
+      menuAberto: false,
+      modal: false,
 
-            favoritas: [],
+      // BACKEND LOCALHOST
+      api: "http://localhost:3000",
 
-            titulo: "",
-            artista: "",
-            imagem: null,
-            audio: null,
+      favoritas: [],
 
-            nomeImagem: "",
-            nomeAudio: "",
+      titulo: "",
+      artista: "",
+      imagem: null,
+      audio: null,
 
-            busca: "",
-            hover: null,
-            musicaAtual: null,
+      nomeImagem: "",
+      nomeAudio: "",
 
-            audioPlayer: null,
-            tocando: false,
-            progresso: 0,
-            tempoAtual: "0:00",
-            duracao: "0:00",
-            volume: 1
-        }
-    },
+      busca: "",
+      hover: null,
+      musicaAtual: null,
 
-    computed: {
-        musicasFiltradas() {
-            if (!this.busca) return this.favoritas
+      audioPlayer: null,
+      tocando: false,
+      progresso: 0,
+      tempoAtual: "0:00",
+      duracao: "0:00",
+      volume: 1
+    };
+  },
 
-            return this.favoritas.filter(m =>
-                (m.titulo || "").toLowerCase().includes(this.busca.toLowerCase()) ||
-                (m.artista || "").toLowerCase().includes(this.busca.toLowerCase())
-            )
-        }
-    },
+  computed: {
+    musicasFiltradas() {
+      if (!this.busca) return this.favoritas;
 
-    methods: {
-        abrirMenu() {
-            this.menuAberto = !this.menuAberto
-        },
-
-        selecionarImagem(e) {
-            const file = e.target.files[0]
-            if (!file) return
-
-            if (!file.type.startsWith("image/")) {
-                alert("Escolha uma imagem válida")
-                return
-            }
-
-            this.imagem = file
-            this.nomeImagem = file.name
-        },
-
-        selecionarAudio(e) {
-            const file = e.target.files[0]
-            if (!file) return
-
-            if (!file.type.startsWith("audio/")) {
-                alert("Escolha um áudio válido (MP3)")
-                return
-            }
-
-            this.audio = file
-            this.nomeAudio = file.name
-        },
-
-        async salvarMusica() {
-            try {
-                const formData = new FormData()
-
-                formData.append("titulo", this.titulo)
-                formData.append("artista", this.artista)
-
-                if (this.imagem) formData.append("imagem", this.imagem)
-                if (this.audio) formData.append("audio", this.audio)
-
-                const res = await fetch("https://spotfree-v1-1.onrender.com/musicas", {
-                    method: "POST",
-                    body: formData
-                })
-
-                const data = await res.json()
-
-                if (!res.ok) {
-                    alert(data.erro || "Erro ao salvar")
-                    return
-                }
-
-                this.titulo = ""
-                this.artista = ""
-                this.imagem = null
-                this.audio = null
-                this.nomeImagem = ""
-                this.nomeAudio = ""
-                this.modal = false
-
-                this.carregarFavoritas()
-
-            } catch {
-                alert("Erro ao enviar")
-            }
-        },
-
-        async carregarFavoritas() {
-            const res = await fetch("https://spotfree-v1-1.onrender.com/musicas")
-            this.favoritas = await res.json()
-        },
-
-        formatarTempo(seg) {
-            if (!seg || isNaN(seg)) return "0:00"
-            const min = Math.floor(seg / 60)
-            const sec = Math.floor(seg % 60).toString().padStart(2, "0")
-            return `${min}:${sec}`
-        },
-
-        tocar(musica) {
-            if (!musica.audio) {
-                alert("Essa música não possui áudio")
-                return
-            }
-
-            if (this.musicaAtual && this.musicaAtual.id === musica.id) {
-                this.togglePlay()
-                return
-            }
-
-            this.musicaAtual = musica
-
-            if (this.audioPlayer) {
-                this.audioPlayer.pause()
-                this.audioPlayer = null
-            }
-
-            this.progresso = 0
-            this.tempoAtual = "0:00"
-            this.duracao = "0:00"
-
-            this.audioPlayer = new Audio(`https://spotfree-v1-1.onrender.com/uploads/${musica.audio}`)
-            this.audioPlayer.volume = this.volume
-
-            this.audioPlayer.play()
-            this.tocando = true
-
-            this.audioPlayer.onloadedmetadata = () => {
-                if (this.audioPlayer.duration) {
-                    this.duracao = this.formatarTempo(this.audioPlayer.duration)
-                }
-            }
-
-            this.audioPlayer.ontimeupdate = () => {
-                if (!this.audioPlayer.duration) return
-
-                this.progresso =
-                    (this.audioPlayer.currentTime / this.audioPlayer.duration) * 100
-
-                this.tempoAtual = this.formatarTempo(this.audioPlayer.currentTime)
-            }
-
-            this.audioPlayer.onended = () => {
-                this.proxima()
-            }
-        },
-
-        togglePlay() {
-            if (!this.audioPlayer) return
-
-            if (this.tocando) {
-                this.audioPlayer.pause()
-            } else {
-                this.audioPlayer.play()
-            }
-
-            this.tocando = !this.tocando
-        },
-
-        mudarTempo(e) {
-            if (!this.audioPlayer || !this.audioPlayer.duration) return
-
-            const tempo = (e.target.value / 100) * this.audioPlayer.duration
-            this.audioPlayer.currentTime = tempo
-        },
-
-        mudarVolume(e) {
-            this.volume = e.target.value
-            if (this.audioPlayer) {
-                this.audioPlayer.volume = this.volume
-            }
-        },
-
-        proxima() {
-            if (!this.musicaAtual) return
-
-            const index = this.favoritas.findIndex(m => m.id === this.musicaAtual.id)
-            const prox = this.favoritas[index + 1]
-
-            if (prox) this.tocar(prox)
-            else this.tocando = false
-        },
-
-        anterior() {
-            if (!this.musicaAtual) return
-
-            const index = this.favoritas.findIndex(m => m.id === this.musicaAtual.id)
-
-            if (index > 0) {
-                this.tocar(this.favoritas[index - 1])
-            }
-        }
-    },
-
-    mounted() {
-        this.carregarFavoritas()
+      return this.favoritas.filter(m =>
+        (m.titulo || "").toLowerCase().includes(this.busca.toLowerCase()) ||
+        (m.artista || "").toLowerCase().includes(this.busca.toLowerCase())
+      );
     }
-}
+  },
+
+  methods: {
+    abrirMenu() {
+      this.menuAberto = !this.menuAberto;
+    },
+
+    selecionarImagem(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      this.imagem = file;
+      this.nomeImagem = file.name;
+    },
+
+    selecionarAudio(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      this.audio = file;
+      this.nomeAudio = file.name;
+    },
+
+    async salvarMusica() {
+      try {
+        const formData = new FormData();
+
+        formData.append("titulo", this.titulo);
+        formData.append("artista", this.artista);
+
+        if (this.imagem) formData.append("imagem", this.imagem);
+        if (this.audio) formData.append("audio", this.audio);
+
+        const res = await fetch(`${this.api}/musicas`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.erro || "Erro");
+          return;
+        }
+
+        this.modal = false;
+        this.titulo = "";
+        this.artista = "";
+        this.nomeImagem = "";
+        this.nomeAudio = "";
+
+        this.carregarFavoritas();
+      } catch {
+        alert("Erro ao salvar");
+      }
+    },
+
+    async carregarFavoritas() {
+      const res = await fetch(`${this.api}/musicas`);
+      this.favoritas = await res.json();
+    },
+
+    formatarTempo(seg) {
+      if (!seg || isNaN(seg)) return "0:00";
+
+      const min = Math.floor(seg / 60);
+      const sec = Math.floor(seg % 60).toString().padStart(2, "0");
+
+      return `${min}:${sec}`;
+    },
+
+    tocar(musica) {
+      if (!musica.audio) return;
+
+      if (this.audioPlayer) {
+        this.audioPlayer.pause();
+      }
+
+      this.musicaAtual = musica;
+
+      this.audioPlayer = new Audio(
+        `${this.api}/uploads/${musica.audio}`
+      );
+
+      this.audioPlayer.volume = this.volume;
+      this.audioPlayer.play();
+
+      this.tocando = true;
+
+      this.audioPlayer.onloadedmetadata = () => {
+        this.duracao = this.formatarTempo(this.audioPlayer.duration);
+      };
+
+      this.audioPlayer.ontimeupdate = () => {
+        this.progresso =
+          (this.audioPlayer.currentTime /
+            this.audioPlayer.duration) *
+          100;
+
+        this.tempoAtual = this.formatarTempo(
+          this.audioPlayer.currentTime
+        );
+      };
+
+      this.audioPlayer.onended = () => {
+        this.proxima();
+      };
+    },
+
+    togglePlay() {
+      if (!this.audioPlayer) return;
+
+      if (this.tocando) {
+        this.audioPlayer.pause();
+      } else {
+        this.audioPlayer.play();
+      }
+
+      this.tocando = !this.tocando;
+    },
+
+    mudarTempo(e) {
+      if (!this.audioPlayer) return;
+
+      const tempo =
+        (e.target.value / 100) *
+        this.audioPlayer.duration;
+
+      this.audioPlayer.currentTime = tempo;
+    },
+
+    mudarVolume(e) {
+      this.volume = e.target.value;
+
+      if (this.audioPlayer) {
+        this.audioPlayer.volume = this.volume;
+      }
+    },
+
+    proxima() {
+      if (!this.musicaAtual) return;
+
+      const index = this.favoritas.findIndex(
+        m => m.id === this.musicaAtual.id
+      );
+
+      const prox = this.favoritas[index + 1];
+
+      if (prox) this.tocar(prox);
+    },
+
+    anterior() {
+      if (!this.musicaAtual) return;
+
+      const index = this.favoritas.findIndex(
+        m => m.id === this.musicaAtual.id
+      );
+
+      if (index > 0) {
+        this.tocar(this.favoritas[index - 1]);
+      }
+    }
+  },
+
+  mounted() {
+    this.carregarFavoritas();
+  }
+};
 </script>
 
 <template>
